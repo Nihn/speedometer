@@ -10,9 +10,9 @@ setup(
         'cv2',
         'argh==0.26.1'],
     entry_points={
-      'console_scripts': [
-          'speedometer = speedometer.main:main'
-      ]
+        'console_scripts': [
+            'speedometer = speedometer.main:main'
+        ]
     },
     package=['speedometer'],
     version='0.1.0',

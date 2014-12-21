@@ -11,6 +11,7 @@ class App:
 
     window_name = 'Speedometer'
     spaces = 20
+    training_corners_mod = 2
 
     callbacks = defaultdict(lambda: lambda val, mod: val + mod, {
         'winSize': lambda val, mod: (val[0]+mod, val[1]+mod),
@@ -173,6 +174,8 @@ class App:
     def _right_interface(self):
         self.network = NeuralNetwork((2, 3, 1), self.epochs)
         self.training = self.samples
+        self.feature_params['maxCorners'] //= self.training_corners_mod
+        self.app_params['tracks_number'] //= self.training_corners_mod
 
     def run(self, skip):
 
@@ -194,16 +197,16 @@ class App:
             if self.training:
                 self.training -= 1
             elif not self.training and self.training is not None:
+
                 if self.multiprocessed:
                     if self.network.is_done():
-                        print 'Training over'
                         self.training = None
+                        self._restore_limits_after_training()
                     elif not self.network.training.is_alive():
-                        print 'Starting training'
                         self.network.training.start()
                 else:
-                    print 'Starting training'
                     self.training = None
+                    self._restore_limits_after_training()
                     self.network.train()
 
             if not self.frame_idx % self.detect_interval:
@@ -218,6 +221,13 @@ class App:
             if 0xFF & key == 27:
                 self._clean_up()
                 break
+            # pause on space
+            elif key == 32:
+                cv2.waitKey()
+
+    def _restore_limits_after_training(self):
+        self.feature_params['maxCorners'] *= self.training_corners_mod
+        self.app_params['tracks_number'] *= self.training_corners_mod
 
     def _optical_flow(self, current_frame, previous_frame):
 

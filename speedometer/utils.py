@@ -13,7 +13,7 @@ def draw_str(dst, (x, y), s, p='l'):
     elif p == 'm':
         scale, _ = cv2.getTextSize(s, font, 1.0, 2)
         x -= scale[0] / 2
-    cv2.putText(dst, s, (x+1, y+1), font, 1.0, (0, 0, 0),
+    cv2.putText(dst, s, (x + 1, y + 1), font, 1.0, (0, 0, 0),
                 thickness=2, lineType=line)
     cv2.putText(dst, s, (x, y), font, 1.0, (255, 255, 255),
                 lineType=line)

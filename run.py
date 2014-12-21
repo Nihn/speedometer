@@ -1,4 +1,4 @@
 from speedometer.main import start
 
-start('test6_out.avi', skip=100, pos_x=-150, quality=0.01, save='test.mp4',
-      multiprocessed=False, epochs=3)
+start('test7_out.avi', skip=400, pos_x=-150, quality=0.01, save='test.mp4',
+      multiprocessed=False, epochs=4, training_accuracy=40)
