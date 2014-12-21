@@ -15,7 +15,7 @@ class NeuralNetworkTestCase(TestCase):
         net = NeuralNetwork(net_tuple)
 
         build_mock.assert_called_once_with(*net_tuple)
-        ds_mock.assert_called_once_with(2, 1)
+        ds_mock.assert_called_once_with(inp=2, target=1)
         thread_mock.assert_called_once_with(target=net.train, args=(1,))
 
         self.assertFalse(net.done)
@@ -28,7 +28,7 @@ class NeuralNetworkTestCase(TestCase):
         net = NeuralNetwork(net_tuple, epochs)
 
         build_mock.assert_called_once_with(*net_tuple)
-        ds_mock.assert_called_once_with(2, 1)
+        ds_mock.assert_called_once_with(inp=2, target=1)
         thread_mock.assert_called_once_with(target=net.train, args=(epochs,))
 
         self.assertFalse(net.done)
@@ -71,7 +71,6 @@ class NeuralNetworkTestCase(TestCase):
         res = net.is_done()
 
         self.assertTrue(res)
-        self.assertFalse(net.done)
 
     def test_is_done_not_done(self, *_):
 
