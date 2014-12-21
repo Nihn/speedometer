@@ -2,11 +2,21 @@ import cv2
 import numpy as np
 
 
-def draw_str(dst, (x, y), s):
-    cv2.putText(dst, s, (x+1, y+1), cv2.FONT_HERSHEY_PLAIN, 1.0, (0, 0, 0),
-                thickness=2, lineType=cv2.LINE_AA)
-    cv2.putText(dst, s, (x, y), cv2.FONT_HERSHEY_PLAIN, 1.0, (255, 255, 255),
-                lineType=cv2.LINE_AA)
+def draw_str(dst, (x, y), s, p='l'):
+
+    font = cv2.FONT_HERSHEY_PLAIN
+    line = cv2.LINE_AA
+
+    if p == 'r':
+        scale, _ = cv2.getTextSize(s, font, 1.0, 2)
+        x -= scale[0]
+    elif p == 'm':
+        scale, _ = cv2.getTextSize(s, font, 1.0, 2)
+        x -= scale[0] / 2
+    cv2.putText(dst, s, (x+1, y+1), font, 1.0, (0, 0, 0),
+                thickness=2, lineType=line)
+    cv2.putText(dst, s, (x, y), font, 1.0, (255, 255, 255),
+                lineType=line)
 
 
 def create_capture(source=0, **params):
@@ -30,16 +40,17 @@ def create_capture(source=0, **params):
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, w)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, h)
     if cap is None or not cap.isOpened():
-        print 'Warning: unable to open video source: ', source
+        raise IOError('Unable to open video source: %s' % source)
     return cap
 
 
-def create_writer(video_name, x, y, fps=25):
+def create_writer(video_name, (x, y), fps=25, codec='MPEG'):
 
-    fourcc = cv2.VideoWriter_fourcc(*'MPEG')
+    fourcc = cv2.VideoWriter_fourcc(*codec)
     out = cv2.VideoWriter(video_name, fourcc, fps, (x, y))
     if not out.isOpened():
         print 'Warning, cannot save file!'
+        out = None
     return out
 
 
