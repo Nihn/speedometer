@@ -24,6 +24,12 @@ class NeuralNetworkTestCase(TestCase):
         self.assertFalse(net.save)
         self.assertTrue(thread_mock.return_value.daemon)
 
+    def test_creation_without_args(self, *_):
+
+        with self.assertRaises(TypeError) as cxt:
+            NeuralNetwork()
+            self.assertEqual(cxt, 'Network tupe or load must be provided.')
+
     def test_creation_with_epochs(self, build_mock, ds_mock, thread_mock):
 
         net_tuple = (1, 2, 3)

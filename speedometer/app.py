@@ -58,8 +58,8 @@ class App:
         self.network_tuple = (2, 3, 1)
         self.training = None
         if load_net:
-            self.network = NeuralNetwork(self.network_tuple, epochs=epochs,
-                                         load=load_net, save=save_net)
+            self.network = NeuralNetwork(epochs=epochs, load=load_net,
+                                         save=save_net)
         else:
             self.network = None
         self.multiprocessed = multiprocessed

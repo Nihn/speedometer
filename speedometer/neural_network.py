@@ -9,7 +9,10 @@ from threading import Thread
 
 class NeuralNetwork(object):
 
-    def __init__(self, network_tuple, epochs=1, save='', load=''):
+    def __init__(self, network_tuple=None, epochs=1, save='', load=''):
+
+        if not network_tuple and not load:
+            raise TypeError('Network tupe or load must be provided.')
 
         self.network = NetworkReader.readFrom(load) if load else \
             buildNetwork(*network_tuple)
