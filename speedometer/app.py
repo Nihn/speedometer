@@ -22,7 +22,7 @@ class App:
 
     def __init__(self, video_src=0, pos_x=0, pos_y=0, quality=0.3, damping=20,
                  speed_multi=0.2, save='', multiprocessed=False, epochs=1,
-                 training_accuracy=20):
+                 training_accuracy=20, save_net='', load_net=''):
         """
 
         :param video_src: video source
@@ -55,10 +55,17 @@ class App:
         self.samples = training_accuracy
         self.speed_multi = speed_multi
 
+        self.network_tuple = (2, 3, 1)
         self.training = None
-        self.network = None
+        if load_net:
+            self.network = NeuralNetwork(self.network_tuple, epochs=epochs,
+                                         load=load_net, save=save_net)
+        else:
+            self.network = None
         self.multiprocessed = multiprocessed
         self.epochs = epochs
+        self.save_net = save_net
+        self.load_net = load_net
 
         self.feature_params = {
             'maxCorners': 30,
@@ -172,7 +179,10 @@ class App:
             temp[key] = self.callbacks[key](temp[key], -1)
 
     def _right_interface(self):
-        self.network = NeuralNetwork((2, 3, 1), self.epochs)
+        if self.network is None:
+            self.network = NeuralNetwork(self.network_tuple,
+                                         epochs=self.epochs,
+                                         save=self.save_net)
         self.training = self.samples
         self.feature_params['maxCorners'] //= self.training_corners_mod
         self.app_params['tracks_number'] //= self.training_corners_mod
