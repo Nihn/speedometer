@@ -28,7 +28,10 @@ class NeuralNetwork(object):
     def train(self, epochs=1):
         self.done = False
         trainer = BackpropTrainer(self.network, self.ds)
-        trainer.trainEpochs(epochs)
+        if epochs is None:
+            trainer.trainUntilConvergence()
+        else:
+            trainer.trainEpochs(epochs)
         self.done = True
         if self.save:
             NetworkWriter.writeToFile(self.network, self.save)

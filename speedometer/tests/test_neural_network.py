@@ -86,6 +86,7 @@ class NeuralNetworkTestCase(TestCase):
 
         trainer_mock.assert_called_once_with(net.network, net.ds)
         trainer_mock.return_value.trainEpochs.assert_called_once_with(epochs)
+        trainer_mock.return_value.trainUntilConvergence.assert_has_no_calls()
         self.assertIsNone(res)
         self.assertTrue(net.done)
 
@@ -96,13 +97,29 @@ class NeuralNetworkTestCase(TestCase):
         epochs = 2
         net = NeuralNetwork((1, 2, 3), save='foo')
         self.assertFalse(net.done)
-        self.assertTrue(net.save)
+        self.assertEqual(net.save, 'foo')
 
         res = net.train(epochs)
 
         writer_mock.writeToFile.assert_called_once_with(net.network, 'foo')
         trainer_mock.assert_called_once_with(net.network, net.ds)
         trainer_mock.return_value.trainEpochs.assert_called_once_with(epochs)
+        self.assertIsNone(res)
+        self.assertTrue(net.done)
+
+    @patch('speedometer.neural_network.BackpropTrainer')
+    def test_train_until_convegence(self, trainer_mock, *_):
+
+        epochs = 2
+        net = NeuralNetwork((1, 2, 3), epochs=None)
+        self.assertFalse(net.done)
+        self.assertFalse(net.save)
+
+        res = net.train(epochs)
+
+        trainer_mock.assert_called_once_with(net.network, net.ds)
+        trainer_mock.return_value.trainUntilConvergence.assert_called_once()
+        trainer_mock.return_value.trainEpochs.assert_has_no_calls()
         self.assertIsNone(res)
         self.assertTrue(net.done)
 

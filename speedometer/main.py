@@ -21,9 +21,9 @@ import os
 from speedometer.app import App
 
 
-def start(video='', skip=0, pos_x=0, pos_y=0, quality=0.3, speed_multi=0.2,
+def start(video='', skip=0, pos_x=0, pos_y=0, quality=0.3, speed_multi=0.02,
           save='', multiprocessed=True, epochs=1, training_accuracy=20,
-          save_net='', load_net=''):
+          training_length=40, save_net='', load_net=''):
 
     print __doc__
 
@@ -34,8 +34,8 @@ def start(video='', skip=0, pos_x=0, pos_y=0, quality=0.3, speed_multi=0.2,
 
     App(video, pos_x, pos_y, quality, save=save, speed_multi=speed_multi,
         multiprocessed=multiprocessed, epochs=epochs,
-        training_accuracy=training_accuracy, save_net=save_net,
-        load_net=load_net).run(skip)
+        training_accuracy=training_accuracy, training_length=training_length,
+        save_net=save_net, load_net=load_net).run(skip)
 
 
 def main():

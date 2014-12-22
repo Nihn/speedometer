@@ -21,14 +21,6 @@ def draw_str(dst, (x, y), s, p='l'):
 
 def create_capture(source=0, **params):
 
-    source = str(source).strip()
-    chunks = source.split(':')
-    # handle drive letter ('c:', ...)
-    if len(chunks) > 1 and len(chunks[0]) == 1 and chunks[0].isalpha():
-        chunks[1] += chunks[0] + ':'
-        del chunks[0]
-
-    source = chunks[0]
     try:
         source = int(source)
     except ValueError:

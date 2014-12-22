@@ -16,13 +16,14 @@ class App:
     callbacks = defaultdict(lambda: lambda val, mod: val + mod, {
         'winSize': lambda val, mod: (val[0]+mod, val[1]+mod),
         'qualityLevel': lambda val, mod: np.abs(val + mod * 0.1),
-        'speed_multi': lambda val, mod: np.abs(val + mod * 0.1),
+        'speed_multi': lambda val, mod: np.abs(val + mod * 0.01),
         'criteria': lambda val, mod: (val[0], val[1] + mod, val[2] + mod * 0.01)
     })
 
     def __init__(self, video_src=0, pos_x=0, pos_y=0, quality=0.3, damping=20,
-                 speed_multi=0.2, save='', multiprocessed=False, epochs=1,
-                 training_accuracy=20, save_net='', load_net=''):
+                 speed_multi=0.02, save='', multiprocessed=False, epochs=1,
+                 training_accuracy=20, training_length=40,
+                 save_net='', load_net=''):
         """
 
         :param video_src: video source
@@ -48,13 +49,12 @@ class App:
         self.prev_gray = None
         self.tracks = deque([deque(maxlen=tracks_number)])
         self.cam = create_capture(video_src)
-        self.frame_idx = 0
         self.sum = deque()
         self.speed = 0
         self.last_speeds = deque([0], maxlen=damping)
-        self.samples = training_accuracy
         self.speed_multi = speed_multi
 
+        # Neural network related attributes
         self.network_tuple = (2, 3, 1)
         self.training = None
         if load_net:
@@ -66,6 +66,9 @@ class App:
         self.epochs = epochs
         self.save_net = save_net
         self.load_net = load_net
+        self.samples = training_accuracy
+        self.training_frames = training_length
+        ####################################
 
         self.feature_params = {
             'maxCorners': 30,
@@ -92,6 +95,8 @@ class App:
                       len(self.lk_params) +
                       len(self.app_params))
 
+        fps = self.cam.get(cv2.CAP_PROP_FPS)
+        self.frame_duration = 1 / fps
         self.start_x = 2 * width/5 + pos_x
         self.stop_x = 3 * width/5 + pos_x
         self.start_y = 4*height/5 + pos_y
@@ -116,7 +121,6 @@ class App:
 
         self.out = None
         if save:
-            fps = self.cam.get(cv2.CAP_PROP_FPS)
             self.out = create_writer(save, (frame.shape[1], frame.shape[0]),
                                      fps)
 
@@ -183,13 +187,13 @@ class App:
             self.network = NeuralNetwork(self.network_tuple,
                                          epochs=self.epochs,
                                          save=self.save_net)
-        self.training = self.samples
+        self.training = self.training_frames
         self.feature_params['maxCorners'] //= self.training_corners_mod
         self.app_params['tracks_number'] //= self.training_corners_mod
 
     def run(self, skip):
 
-        self.frame_idx = skip
+        frame_idx = skip
         while skip:
             _ = self.cam.read()
             skip -= 1
@@ -219,20 +223,20 @@ class App:
                     self._restore_limits_after_training()
                     self.network.train()
 
-            if not self.frame_idx % self.detect_interval:
+            if not frame_idx % self.detect_interval:
                 self._get_new_tracks(frame_gray)
 
+            frame_idx += 1
             self.prev_gray = frame_gray
-            self.frame_idx += 1
             self._show_and_save(vis)
 
-            # Quit on esc key
             key = cv2.waitKey(1)
             if 0xFF & key == 27:
+                # quit on esc key
                 self._clean_up()
                 break
-            # pause on space
             elif key == 32:
+                # pause on space
                 cv2.waitKey()
 
     def _restore_limits_after_training(self):
@@ -296,7 +300,8 @@ class App:
 
     def _measure_speed(self, sum_r):
         if self.tracks:
-            self.last_speeds.append(sum_r / len(self.tracks))
+            self.last_speeds.append(sum_r / (self.frame_duration *
+                                             len(self.tracks)))
             # speed is calculated as arythmetic average of last speeds
             self.speed = sum(self.last_speeds)/len(self.last_speeds)
 
@@ -374,14 +379,14 @@ class App:
                       (self.stop_x, self.stop_y), (255, 0, 0))
 
         # Training progress bar
-        if self.training is not None:
-            if self.training:
-                percentage = 10 * (self.samples - self.training) // self.samples
-                draw_str(vis, (self.middle_x - self.spaces, self.spaces),
-                         'Getting samples...', 'm')
-                draw_str(vis, (self.middle_x - self.spaces, self.spaces * 2),
-                         '%s %d%%' % ('#' * percentage, percentage * 10), 'm')
-            else:
+        if self.training:
+            percentage = 10 * (self.training_frames -
+                               self.training) // self.training_frames
+            draw_str(vis, (self.middle_x - self.spaces, self.spaces),
+                     'Getting samples...', 'm')
+            draw_str(vis, (self.middle_x - self.spaces, self.spaces * 2),
+                     '%s %d%%' % ('#' * percentage, percentage * 10), 'm')
+        elif self.training is not None:
                 draw_str(vis, (self.middle_x - self.spaces, self.spaces),
                          'Training...', 'm')
         cv2.imshow(self.window_name, vis)
