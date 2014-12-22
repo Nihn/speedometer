@@ -41,18 +41,19 @@ class App:
         :return: App instance
         """
 
+        # Tracks related attributes
         tracks_number = 100
-
         self.track_len = 10
         self.tracks_count = 0
         self.detect_interval = 5
-        self.prev_gray = None
         self.tracks = deque([deque(maxlen=tracks_number)])
-        self.cam = create_capture(video_src)
-        self.sum = deque()
+        ###########################
+
+        # Speed measure realted attributes
         self.speed = 0
         self.last_speeds = deque([0], maxlen=damping)
         self.speed_multi = speed_multi
+        ###################################
 
         # Neural network related attributes
         self.network_tuple = (2, 3, 1)
@@ -76,27 +77,30 @@ class App:
             'minDistance': 7,
             'blockSize': 7
         }
-
         self.lk_params = {
             'winSize': (21, 21),
             'maxLevel': 3,
             'criteria': (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT,
                          10, 0.03)}
-
         self.app_params = {
             'speed_multi': speed_multi,
             'tracks_number': tracks_number,
             'distance_mod': 1
         }
 
+        # Frames related attributes
+        self.prev_gray = None
+        self.cam = create_capture(video_src)
         _, frame = self.cam.read()
+        fps = self.cam.get(cv2.CAP_PROP_FPS)
+        self.frame_duration = 1 / fps
+        ############################
+
+        # Interaface position related attributes
         height, width, _ = frame.shape
         params_len = (len(self.feature_params) +
                       len(self.lk_params) +
                       len(self.app_params))
-
-        fps = self.cam.get(cv2.CAP_PROP_FPS)
-        self.frame_duration = 1 / fps
         self.start_x = 2 * width/5 + pos_x
         self.stop_x = 3 * width/5 + pos_x
         self.start_y = 4*height/5 + pos_y
@@ -118,14 +122,17 @@ class App:
                 'clicked': False
             }
         }
+        self.clicked = False
+        ############################################
 
+        # Video capture related attributes
         self.out = None
         if save:
             self.out = create_writer(save, (frame.shape[1], frame.shape[0]),
                                      fps)
+        ###################################
 
         cv2.namedWindow(self.window_name)
-        self.clicked = False
         cv2.setMouseCallback(self.window_name, self._on_mouse)
 
     def _on_mouse(self, event, x, y, *_):
@@ -137,15 +144,22 @@ class App:
                 and y > self.interface['right']['top_border']):
             self._interface('right', event)
         elif event == cv2.EVENT_LBUTTONDOWN:
+            # Begin capturing new feature detection zone
             self.clicked = True
             self.start_x = self.stop_x = x
             self.start_y = self.stop_y = y
-            self.tracks = deque([deque(maxlen=self.app_params['tracks_number'])])
+            self.tracks = deque(
+                [deque(maxlen=self.app_params['tracks_number'])])
+            ##############################################
         elif event == cv2.EVENT_LBUTTONUP:
+            # End capturing new feature detection zone
             self.clicked = False
+            ###########################################
         elif self.clicked and event == cv2.EVENT_MOUSEMOVE:
+            # Capturing new feature detection zone
             self.stop_x = x
             self.stop_y = y
+            ######################################
 
     def _interface(self, which, event, *args):
 
@@ -183,11 +197,13 @@ class App:
             temp[key] = self.callbacks[key](temp[key], -1)
 
     def _right_interface(self):
-        if self.network is None:
-            self.network = NeuralNetwork(self.network_tuple,
-                                         epochs=self.epochs,
-                                         save=self.save_net)
+
+        self.network = NeuralNetwork(self.network_tuple,
+                                     epochs=self.epochs,
+                                     save=self.save_net)
+
         self.training = self.training_frames
+        # use less features per zone durning training
         self.feature_params['maxCorners'] //= self.training_corners_mod
         self.app_params['tracks_number'] //= self.training_corners_mod
 
@@ -268,6 +284,7 @@ class App:
                     tr.append((x, y))
                     new_tracks.append(tr)
 
+                    # pixel shift on y axis
                     radius = tr[-1][-1] - tr[-2][-1]
                     if self.training and not i:
                         self.network.add_sample(radius, tr[-1][0] - tr[-2][0],
@@ -300,6 +317,7 @@ class App:
 
     def _measure_speed(self, sum_r):
         if self.tracks:
+            # measure speed based on frame duration and pixels movement
             self.last_speeds.append(sum_r / (self.frame_duration *
                                              len(self.tracks)))
             # speed is calculated as arythmetic average of last speeds
@@ -316,14 +334,16 @@ class App:
                 * self.samples)
             masks = deque()
             counter = self.samples
+
             while counter:
+                # Get sub capture zones
                 step = (self.stop_y - self.start_y) // self.samples
                 stop_y = self.start_y + counter * step
                 start_y = self.start_y + (counter - 1) * step
                 self.t_points = (start_y, stop_y)
-                counter -= 1
                 masks.append(np.zeros_like(frame_gray))
                 masks[-1][start_y:stop_y, self.start_x:self.stop_x] = 1
+                counter -= 1
         else:
             self.tracks = deque(
                 [deque([], maxlen=self.app_params['tracks_number'])])
@@ -331,13 +351,16 @@ class App:
             masks[0][self.start_y:self.stop_y, self.start_x:self.stop_x] = 1
 
         for i, mask in enumerate(masks):
+            # Dont get same tracks
             for x, y in [np.int32(tr[-1]) for tr in self.tracks[i]]:
                     cv2.circle(mask, (x, y), 5, 0)
 
-            feature = cv2.goodFeaturesToTrack(frame_gray, mask=mask,
-                                              **self.feature_params)
-            if feature is not None:
-                for x, y in feature.reshape(-1, 2):
+            # Get new features
+            features = cv2.goodFeaturesToTrack(frame_gray, mask=mask,
+                                               **self.feature_params)
+            if features is not None:
+                # If new features detected add them to the rest
+                for x, y in features.reshape(-1, 2):
                     self.tracks[i].append(deque([(x, y)],
                                                 maxlen=self.track_len))
 
@@ -378,7 +401,7 @@ class App:
         cv2.rectangle(vis, (self.start_x, self.start_y),
                       (self.stop_x, self.stop_y), (255, 0, 0))
 
-        # Training progress bar
+        # Training progress indicator
         if self.training:
             percentage = 10 * (self.training_frames -
                                self.training) // self.training_frames
