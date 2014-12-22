@@ -403,12 +403,12 @@ class App:
 
         # Training progress indicator
         if self.training:
-            percentage = 10 * (self.training_frames -
-                               self.training) // self.training_frames
+            percentage = 10 * float(
+                self.training_frames - self.training) / self.training_frames
             draw_str(vis, (self.middle_x - self.spaces, self.spaces),
                      'Getting samples...', 'm')
             draw_str(vis, (self.middle_x - self.spaces, self.spaces * 2),
-                     '%s %d%%' % ('#' * percentage, percentage * 10), 'm')
+                     '%s %d%%' % ('#' * int(percentage), percentage * 10), 'm')
         elif self.training is not None:
                 draw_str(vis, (self.middle_x - self.spaces, self.spaces),
                          'Training...', 'm')
