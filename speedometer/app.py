@@ -49,10 +49,11 @@ class App:
         self.tracks = deque([deque(maxlen=tracks_number)])
         ###########################
 
-        # Speed measure realted attributes
+        # Speed and distance measure realted attributes
         self.speed = 0
         self.last_speeds = deque([0], maxlen=damping)
         self.speed_multi = speed_multi
+        self.distance = 0
         ###################################
 
         # Neural network related attributes
@@ -89,6 +90,7 @@ class App:
         }
 
         # Frames related attributes
+        self.frame_idx = 0
         self.prev_gray = None
         self.cam = create_capture(video_src)
         _, frame = self.cam.read()
@@ -209,7 +211,7 @@ class App:
 
     def run(self, skip):
 
-        frame_idx = skip
+        self.frame_idx = skip
         while skip:
             _ = self.cam.read()
             skip -= 1
@@ -239,10 +241,10 @@ class App:
                     self._restore_limits_after_training()
                     self.network.train()
 
-            if not frame_idx % self.detect_interval:
+            if not self.frame_idx % self.detect_interval:
                 self._get_new_tracks(frame_gray)
 
-            frame_idx += 1
+            self.frame_idx += 1
             self.prev_gray = frame_gray
             self._show_and_save(vis)
 
@@ -312,16 +314,17 @@ class App:
 
                 self.tracks[i] = new_tracks
                 self.tracks_count += len(self.tracks[i])
-                sum += sum_r / len(track)
-        return sum
+                sum += sum_r / len(new_tracks)
+        return np.abs(sum / len(self.tracks))
 
     def _measure_speed(self, sum_r):
         if self.tracks:
             # measure speed based on frame duration and pixels movement
-            self.last_speeds.append(sum_r / (self.frame_duration *
-                                             len(self.tracks)))
+            self.last_speeds.append(sum_r / self.frame_duration)
             # speed is calculated as arythmetic average of last speeds
             self.speed = sum(self.last_speeds)/len(self.last_speeds)
+            # all speeds are stored for average
+            self.distance += sum_r
 
     def _get_new_tracks(self, frame_gray):
 
@@ -373,6 +376,11 @@ class App:
                  'speed: %.2f km/h' % np.abs(self.speed))
         draw_str(vis, (self.spaces, self.spaces * 3),
                  'speed without dump: %.2f km/h' % np.abs(self.last_speeds[-1]))
+        draw_str(vis, (self.spaces, self.spaces * 4),
+                 'average speed: %.2f km/h' %
+                 (self.distance / (self.frame_idx * self.frame_duration)))
+        draw_str(vis, (self.spaces, self.spaces * 5),
+                 'traveled distance: %.2f m' % self.distance)
 
         # Neural network training button - right bottom corner
         draw_str(vis, (self.right - self.spaces, self.bottom - self.spaces),
