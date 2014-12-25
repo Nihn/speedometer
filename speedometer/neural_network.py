@@ -16,20 +16,21 @@ class NeuralNetwork(object):
 
         self.network = NetworkReader.readFrom(load) if load else \
             buildNetwork(*network_tuple)
-        self.ds = SupervisedDataSet(inp=2, target=1)
+        self.ds = SupervisedDataSet(inp=4, target=1)
         self.training = Thread(target=self.train, args=(epochs,))
         self.training.daemon = True
         self.done = False
         self.save = save
 
-    def add_sample(self, x, y, result):
-        self.ds.addSample((x, y), (result,))
+    def add_sample(self, x, y, dx, dy, result):
+        self.ds.addSample((x, y, dx, dy), (result,))
 
     def train(self, epochs=1):
         self.done = False
         trainer = BackpropTrainer(self.network, self.ds)
+        trainer.verbose = True
         if epochs is None:
-            trainer.trainUntilConvergence()
+            print trainer.trainUntilConvergence()
         else:
             trainer.trainEpochs(epochs)
         self.done = True
@@ -39,5 +40,5 @@ class NeuralNetwork(object):
     def is_done(self):
         return self.done
 
-    def result(self, x, y):
-        return self.network.activate((x, y))
+    def result(self, x, y, dx, dy):
+        return self.network.activate((x, y, dx, dy))

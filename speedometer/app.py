@@ -11,7 +11,7 @@ class App:
 
     window_name = 'Speedometer'
     spaces = 20
-    training_corners_mod = 2
+    training_corners_mod = 4
 
     callbacks = defaultdict(lambda: lambda val, mod: val + mod, {
         'winSize': lambda val, mod: (val[0]+mod, val[1]+mod),
@@ -57,7 +57,7 @@ class App:
         ###################################
 
         # Neural network related attributes
-        self.network_tuple = (2, 3, 1)
+        self.network_tuple = (4, 3, 1)
         self.training = None
         if load_net:
             self.network = NeuralNetwork(epochs=epochs, load=load_net,
@@ -290,16 +290,19 @@ class App:
                     radius = tr[-1][-1] - tr[-2][-1]
                     if self.training and not i:
                         self.network.add_sample(radius, tr[-1][0] - tr[-2][0],
+                                                tr[-1][-1], tr[-1][0],
                                                 radius *
                                                 self.app_params['speed_multi'])
                     elif self.training:
                         self.network.add_sample(radius, tr[-1][0] - tr[-2][0],
+                                                tr[-1][-1], tr[-1][0],
                                                 expected_res)
 
                     if self.training is None and self.network:
                         # If neural network is ready use it
                         sum_r += self.network.result(radius,
-                                                     tr[-1][0] - tr[-2][0])
+                                                     tr[-1][0] - tr[-2][0],
+                                                     tr[-1][-1], tr[-1][0])
                     else:
                         height_mod = \
                             10 * (self.bottom -
@@ -313,8 +316,9 @@ class App:
                     expected_res = sum_r / len(track)
 
                 self.tracks[i] = new_tracks
-                self.tracks_count += len(self.tracks[i])
-                sum += sum_r / len(new_tracks)
+                self.tracks_count += len(new_tracks)
+                if new_tracks:
+                    sum += sum_r / len(new_tracks)
         return np.abs(sum / len(self.tracks))
 
     def _measure_speed(self, sum_r):

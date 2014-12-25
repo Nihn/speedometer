@@ -17,7 +17,7 @@ class NeuralNetworkTestCase(TestCase):
 
         reader_mock.readFrom.assert_has_no_calls()
         build_mock.assert_called_once_with(*net_tuple)
-        ds_mock.assert_called_once_with(inp=2, target=1)
+        ds_mock.assert_called_once_with(inp=4, target=1)
         thread_mock.assert_called_once_with(target=net.train, args=(1,))
 
         self.assertFalse(net.done)
@@ -37,7 +37,7 @@ class NeuralNetworkTestCase(TestCase):
         net = NeuralNetwork(net_tuple, epochs)
 
         build_mock.assert_called_once_with(*net_tuple)
-        ds_mock.assert_called_once_with(inp=2, target=1)
+        ds_mock.assert_called_once_with(inp=4, target=1)
         thread_mock.assert_called_once_with(target=net.train, args=(epochs,))
 
         self.assertFalse(net.done)
@@ -53,7 +53,7 @@ class NeuralNetworkTestCase(TestCase):
 
         build_mock.assert_has_no_calls()
         reader_mock.readFrom.assert_called_once_with('foo')
-        ds_mock.assert_called_once_with(inp=2, target=1)
+        ds_mock.assert_called_once_with(inp=4, target=1)
         thread_mock.assert_called_once_with(target=net.train, args=(epochs,))
 
         self.assertTrue(net.save)
@@ -64,14 +64,14 @@ class NeuralNetworkTestCase(TestCase):
 
         net = NeuralNetwork((1, 2, 3))
 
-        args_1 = (1, 2, 3)
-        args_2 = (3, 4, 5)
+        args_1 = (1, 2, 3, 4, 5)
+        args_2 = (3, 4, 5, 6, 7)
 
         self.assertIsNone(net.add_sample(*args_1))
         self.assertIsNone(net.add_sample(*args_2))
 
-        net.ds.addSample.assert_has_calls([call(args_1[0:2], (args_1[2],)),
-                                           call(args_2[0:2], (args_2[2],))])
+        net.ds.addSample.assert_has_calls([call(args_1[0:4], (args_1[-1],)),
+                                           call(args_2[0:4], (args_2[-1],))])
 
         self.assertFalse(net.done)
 
@@ -145,7 +145,7 @@ class NeuralNetworkTestCase(TestCase):
 
         net = NeuralNetwork((1, 2, 3))
 
-        res = net.result(1, 2)
+        res = net.result(1, 2, 3, 4)
 
-        net.network.activate.assert_called_once_with((1, 2))
+        net.network.activate.assert_called_once_with((1, 2, 3, 4))
         self.assertEqual(res, net.network.activate.return_value)
