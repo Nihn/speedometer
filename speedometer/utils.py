@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 
+r = lambda x1, y1, x2, y2: np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+
 
 def draw_str(dst, (x, y), s, p='l'):
 
@@ -46,9 +48,11 @@ def create_writer(video_name, (x, y), fps=25, codec='MPEG'):
     return out
 
 
-def r(x1, y1, x2, y2):
+def scale(method):
+    def wrapper(self, y, dy, *args, **kwargs):
+        new_y = y / self.scale
+        new_dy = dy / 100 + 0.5
+        return method(self, *args, y=new_y, dy=new_dy, **kwargs)
+    return wrapper
 
-    result = np.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
-    if np.isnan(result):
-        return 0
-    return result
+

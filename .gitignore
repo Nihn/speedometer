@@ -46,3 +46,4 @@ Temporary Items
 ../test5_out.avi
 *.pyc
 .idea
+*.xml

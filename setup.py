@@ -7,8 +7,8 @@ setup(
     install_requires=[
         'numpy',
         'pybrain',
-        'cv2',
-        'argh==0.26.1'],
+        'argh==0.26.1',
+        'mock'],
     entry_points={
         'console_scripts': [
             'speedometer = speedometer.main:main'

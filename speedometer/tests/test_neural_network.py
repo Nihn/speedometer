@@ -17,8 +17,8 @@ class NeuralNetworkTestCase(TestCase):
 
         reader_mock.readFrom.assert_has_no_calls()
         build_mock.assert_called_once_with(*net_tuple)
-        ds_mock.assert_called_once_with(inp=4, target=1)
-        thread_mock.assert_called_once_with(target=net.train, args=(1,))
+        ds_mock.assert_called_once_with(inp=2, target=1)
+        thread_mock.assert_called_once_with(target=net.train, args=(1, 0))
 
         self.assertFalse(net.done)
         self.assertFalse(net.save)
@@ -37,8 +37,8 @@ class NeuralNetworkTestCase(TestCase):
         net = NeuralNetwork(net_tuple, epochs)
 
         build_mock.assert_called_once_with(*net_tuple)
-        ds_mock.assert_called_once_with(inp=4, target=1)
-        thread_mock.assert_called_once_with(target=net.train, args=(epochs,))
+        ds_mock.assert_called_once_with(inp=2, target=1)
+        thread_mock.assert_called_once_with(target=net.train, args=(epochs, 0))
 
         self.assertFalse(net.done)
         self.assertFalse(net.save)
@@ -53,8 +53,8 @@ class NeuralNetworkTestCase(TestCase):
 
         build_mock.assert_has_no_calls()
         reader_mock.readFrom.assert_called_once_with('foo')
-        ds_mock.assert_called_once_with(inp=4, target=1)
-        thread_mock.assert_called_once_with(target=net.train, args=(epochs,))
+        ds_mock.assert_called_once_with(inp=2, target=1)
+        thread_mock.assert_called_once_with(target=net.train, args=(epochs, 0))
 
         self.assertTrue(net.save)
         self.assertFalse(net.done)
@@ -62,64 +62,70 @@ class NeuralNetworkTestCase(TestCase):
 
     def test_add_sample(self, *_):
 
-        net = NeuralNetwork((1, 2, 3))
+        net = NeuralNetwork((2, 2, 1))
 
-        args_1 = (1, 2, 3, 4, 5)
-        args_2 = (3, 4, 5, 6, 7)
+        kwargs_1 = {'y': 1, 'dy': 4, 'result': 5}
+        kwargs_2 = {'y': 2, 'dy': 3, 'result': 6}
 
-        self.assertIsNone(net.add_sample(*args_1))
-        self.assertIsNone(net.add_sample(*args_2))
+        self.assertIsNone(net.add_sample(**kwargs_1))
+        self.assertIsNone(net.add_sample(**kwargs_2))
 
-        net.ds.addSample.assert_has_calls([call(args_1[0:4], (args_1[-1],)),
-                                           call(args_2[0:4], (args_2[-1],))])
+        net.ds.addSample.assert_has_calls([call((0, 0.5), (0,)),
+                                           call((0, 0.5), (0,))])
 
         self.assertFalse(net.done)
 
+    @patch('speedometer.neural_network.train_until_convergence')
     @patch('speedometer.neural_network.BackpropTrainer')
-    def test_train(self, trainer_mock, *_):
+    def test_train(self, trainer_mock, train_uc_mock, *_):
 
-        epochs = 2
         net = NeuralNetwork((1, 2, 3))
         self.assertFalse(net.done)
 
-        res = net.train(epochs)
+        res = net.train()
 
-        trainer_mock.assert_called_once_with(net.network, net.ds)
-        trainer_mock.return_value.trainEpochs.assert_called_once_with(epochs)
-        trainer_mock.return_value.trainUntilConvergence.assert_has_no_calls()
+        trainer_mock.assert_called_once_with(net.network, learningrate=0.2)
+        train_uc_mock.assert_called_once_with(
+            trainer=trainer_mock.return_value, dataset=net.ds,
+            max_error=0, max_epochs=1)
         self.assertIsNone(res)
         self.assertTrue(net.done)
 
+    @patch('speedometer.neural_network.train_until_convergence')
     @patch('speedometer.neural_network.NetworkWriter')
     @patch('speedometer.neural_network.BackpropTrainer')
-    def test_train_with_save(self, trainer_mock, writer_mock, *_):
+    def test_train_with_save(self, trainer_mock, writer_mock,
+                             train_uc_mock, *_):
 
         epochs = 2
-        net = NeuralNetwork((1, 2, 3), save='foo')
+        net = NeuralNetwork((1, 2, 3), save='foo', epochs=epochs)
         self.assertFalse(net.done)
         self.assertEqual(net.save, 'foo')
 
-        res = net.train(epochs)
+        res = net.train()
 
         writer_mock.writeToFile.assert_called_once_with(net.network, 'foo')
-        trainer_mock.assert_called_once_with(net.network, net.ds)
-        trainer_mock.return_value.trainEpochs.assert_called_once_with(epochs)
+        trainer_mock.assert_called_once_with(net.network, learningrate=0.2)
+        train_uc_mock.assert_called_once_with(
+            dataset=net.ds, max_error=0, max_epochs=epochs,
+            trainer=trainer_mock.return_value)
         self.assertIsNone(res)
         self.assertTrue(net.done)
 
+    @patch('speedometer.neural_network.train_until_convergence')
     @patch('speedometer.neural_network.BackpropTrainer')
-    def test_train_until_convegence(self, trainer_mock, *_):
+    def test_train_until_convegence(self, trainer_mock, train_uc_mock, *_):
 
-        epochs = 2
         net = NeuralNetwork((1, 2, 3), epochs=None)
         self.assertFalse(net.done)
         self.assertFalse(net.save)
 
-        res = net.train(epochs)
+        res = net.train()
 
-        trainer_mock.assert_called_once_with(net.network, net.ds)
-        trainer_mock.return_value.trainUntilConvergence.assert_called_once()
-        trainer_mock.return_value.trainEpochs.assert_has_no_calls()
+        trainer_mock.assert_called_once_with(net.network, learningrate=0.2)
+        train_uc_mock.assert_called_once_with(
+            trainer=trainer_mock.return_value, dataset=net.ds,
+            max_error=0, max_epochs=None)
         self.assertIsNone(res)
         self.assertTrue(net.done)
 
@@ -144,8 +150,9 @@ class NeuralNetworkTestCase(TestCase):
     def test_result(self, *_):
 
         net = NeuralNetwork((1, 2, 3))
+        net.network.activate.return_value = [1]
 
-        res = net.result(1, 2, 3, 4)
+        res = net.result(1, 4)
 
-        net.network.activate.assert_called_once_with((1, 2, 3, 4))
-        self.assertEqual(res, net.network.activate.return_value)
+        net.network.activate.assert_called_once_with((0, 0.5))
+        self.assertEqual(res, net.network.activate.return_value[0] * 100)
